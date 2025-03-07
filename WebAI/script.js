@@ -37,6 +37,7 @@ async function generateQuestions() {
                 C. <đáp án C>
                 D. <đáp án D>
                 Đáp án đúng: <chữ cái đáp án đúng>
+                Lý do: <lý do đáp án đúng>
                 ---
                 `,
               },
@@ -74,29 +75,34 @@ async function generateQuestions() {
   document.getElementById("max-score").textContent = questions.length;
   document.getElementById("current-score").textContent = "0";
 
+  // Reset background color
+  resetBackgroundColor();
+  
   displayCurrentQuestion();
   updateNavigationButtons();
 }
 
 
 function parseQuestion(content) {
-  const lines = content.split("\n").map((line) => line.trim()).filter((line) => line);
-  
+  const lines = content.split("\n").map(line => line.trim()).filter(line => line);
   let question = "";
   let choices = [];
   let correctAnswer = "";
+  let reason = "";
 
-  for (let line of lines) {
+  lines.forEach(line => {
     if (line.startsWith("Câu hỏi:")) {
       question = line.replace("Câu hỏi:", "").trim();
     } else if (/^[A-D]\./.test(line)) {
       choices.push(line);
     } else if (line.startsWith("Đáp án đúng:")) {
       correctAnswer = line.replace("Đáp án đúng:", "").trim();
+    } else if (line.startsWith("Lý do:")) {
+      reason = line.replace("Lý do:", "").trim();
     }
-  }
+  });
 
-  return question && correctAnswer ? { question, choices, correctAnswer } : null;
+  return question && correctAnswer ? { question, choices, correctAnswer, reason } : null;
 }
 
 
@@ -167,6 +173,15 @@ function selectAnswer(answer) {
   if (isCorrect) {
     currentScore++
     document.getElementById("current-score").textContent = currentScore
+    
+    // Thêm hiệu ứng nền xanh khi đúng
+    changeBackgroundColor(true);
+    
+    // Hiệu ứng pháo hoa khi đúng
+    createFireworks();
+  } else {
+    // Thêm hiệu ứng nền đỏ khi sai
+    changeBackgroundColor(false);
   }
 
   // Show feedback
@@ -176,9 +191,127 @@ function selectAnswer(answer) {
   updateNavigationButtons()
 }
 
+// Hàm tạo hiệu ứng pháo hoa
+function createFireworks() {
+  const fireworksContainer = document.createElement('div');
+  fireworksContainer.className = 'fireworks-container';
+  document.body.appendChild(fireworksContainer);
+  
+  // Tạo nhiều pháo hoa với màu sắc khác nhau
+  const colors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFA500', '#800080'];
+  
+  // Tạo 50 hạt pháo hoa
+  for (let i = 0; i < 100; i++) {
+    createParticle(fireworksContainer, colors);
+  }
+  
+  // Xóa container sau khi hiệu ứng kết thúc
+  setTimeout(() => {
+    fireworksContainer.remove();
+  }, 3000);
+}
+
+function createParticle(container, colors) {
+  const particle = document.createElement('div');
+  particle.className = 'firework-particle';
+  
+  // Vị trí ban đầu (giữa màn hình)
+  const startX = window.innerWidth / 2;
+  const startY = window.innerHeight / 2;
+  
+  // Màu ngẫu nhiên
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  
+  // Kích thước ngẫu nhiên
+  const size = Math.random() * 8 + 4;
+  
+  // Góc và khoảng cách ngẫu nhiên
+  const angle = Math.random() * Math.PI * 2;
+  const distance = Math.random() * 150 + 50;
+  
+  // Tốc độ ngẫu nhiên
+  const duration = Math.random() * 1 + 1;
+  
+  // Vị trí đích
+  const destX = startX + Math.cos(angle) * distance;
+  const destY = startY + Math.sin(angle) * distance;
+  
+  // Thiết lập style
+  particle.style.backgroundColor = color;
+  particle.style.width = `${size}px`;
+  particle.style.height = `${size}px`;
+  particle.style.position = 'fixed';
+  particle.style.borderRadius = '50%';
+  particle.style.zIndex = '9999';
+  particle.style.opacity = '1';
+  particle.style.left = `${startX}px`;
+  particle.style.top = `${startY}px`;
+  
+  container.appendChild(particle);
+  
+  // Animation
+  setTimeout(() => {
+    particle.style.transition = `all ${duration}s cubic-bezier(0.1, 0.5, 0.5, 1)`;
+    particle.style.left = `${destX}px`;
+    particle.style.top = `${destY}px`;
+    particle.style.opacity = '0';
+  }, 10);
+  
+  // Xóa particle sau khi animation kết thúc
+  setTimeout(() => {
+    particle.remove();
+  }, duration * 1000 + 100);
+}
+
+// Hàm thay đổi màu nền
+function changeBackgroundColor(isCorrect) {
+  const quizCard = document.querySelector('.quiz-card');
+  const questionContainer = document.getElementById('question-container');
+  
+  // Xóa các class màu cũ
+  quizCard.classList.remove('correct-background', 'incorrect-background');
+  questionContainer.classList.remove('correct-background', 'incorrect-background');
+  
+  // Thêm class màu mới
+  if (isCorrect) {
+    quizCard.classList.add('correct-background');
+    questionContainer.classList.add('correct-background');
+    
+    // Hiệu ứng rung nhẹ khi đúng
+    quizCard.classList.add('correct-animation');
+    setTimeout(() => {
+      quizCard.classList.remove('correct-animation');
+    }, 500);
+  } else {
+    quizCard.classList.add('incorrect-background');
+    questionContainer.classList.add('incorrect-background');
+    
+    // Hiệu ứng rung mạnh khi sai
+    quizCard.classList.add('incorrect-animation');
+    setTimeout(() => {
+      quizCard.classList.remove('incorrect-animation');
+    }, 500);
+  }
+  
+  // Tự động reset màu sau 1.5 giây
+  setTimeout(() => {
+    resetBackgroundColor();
+  }, 1500);
+}
+
+// Hàm reset màu nền về mặc định
+function resetBackgroundColor() {
+  const quizCard = document.querySelector('.quiz-card');
+  const questionContainer = document.getElementById('question-container');
+  
+  quizCard.classList.remove('correct-background', 'incorrect-background', 'correct-animation', 'incorrect-animation');
+  questionContainer.classList.remove('correct-background', 'incorrect-background');
+}
+
 function nextQuestion() {
   if (currentQuestionIndex < questions.length - 1) {
     currentQuestionIndex++
+    resetBackgroundColor(); // Reset màu khi chuyển câu hỏi
     displayCurrentQuestion()
     updateNavigationButtons()
   }
@@ -187,6 +320,7 @@ function nextQuestion() {
 function previousQuestion() {
   if (currentQuestionIndex > 0) {
     currentQuestionIndex--
+    resetBackgroundColor(); // Reset màu khi chuyển câu hỏi
     displayCurrentQuestion()
     updateNavigationButtons()
   }
@@ -222,32 +356,56 @@ function updateNavigationButtons() {
 }
 
 function finishQuiz() {
-  // Show results section
-  document.getElementById("quiz-section").classList.add("hidden")
-  document.getElementById("results-section").classList.remove("hidden")
+  document.getElementById("quiz-section").classList.add("hidden");
+  document.getElementById("results-section").classList.remove("hidden");
 
-  // Update final score
-  document.getElementById("final-score").textContent = currentScore
-  document.getElementById("final-max-score").textContent = questions.length
+  document.getElementById("final-score").textContent = currentScore;
+  document.getElementById("final-max-score").textContent = questions.length;
 
-  // Set result message based on score
-  const percentage = (currentScore / questions.length) * 100
-  let message = ""
+  const percentage = (currentScore / questions.length) * 100;
+  let message = "";
 
   if (percentage === 100) {
-    message = "Tuyệt vời! Bạn đã trả lời đúng tất cả các câu hỏi!"
+    message = "Tuyệt vời! Bạn đã trả lời đúng tất cả các câu hỏi!";
+    // Hiệu ứng pháo hoa khi hoàn thành xuất sắc
+    setTimeout(() => {
+      createFireworks();
+      setTimeout(() => createFireworks(), 500);
+    }, 300);
   } else if (percentage >= 80) {
-    message = "Rất tốt! Bạn đã làm rất tốt!"
+    message = "Rất tốt! Bạn đã làm rất tốt!";
   } else if (percentage >= 60) {
-    message = "Khá tốt! Bạn đã vượt qua bài kiểm tra!"
+    message = "Khá tốt! Bạn đã vượt qua bài kiểm tra!";
   } else if (percentage >= 40) {
-    message = "Bạn cần cố gắng hơn nữa!"
+    message = "Bạn cần cố gắng hơn nữa!";
   } else {
-    message = "Hãy tiếp tục học tập và thử lại!"
+    message = "Hãy tiếp tục học tập và thử lại!";
   }
 
-  document.getElementById("result-message").textContent = message
+  document.getElementById("result-message").textContent = message;
+
+  // Hiển thị danh sách chi tiết từng câu hỏi
+  const detailedResults = document.getElementById("detailed-results");
+  detailedResults.innerHTML = ""; // Xóa nội dung cũ
+
+  questions.forEach((question, index) => {
+    const userAnswer = userAnswers[index] || "Chưa chọn";
+    const isCorrect = userAnswer === question.correctAnswer;
+    const resultClass = isCorrect ? "correct-answer" : "incorrect-answer";
+
+    const questionHtml = `
+      <div class="result-question">
+        <h4>${index + 1}. ${question.question}</h4>
+        <p><strong>Đáp án của bạn:</strong> <span class="${resultClass}">${userAnswer}</span></p>
+        <p><strong>Đáp án đúng:</strong> <span class="correct-answer">${question.correctAnswer}</span></p>
+        <p><strong>Lý Do:</strong> <span class="correct-answer">${question.reason}</span></p>
+      </div>
+    `;
+
+    detailedResults.innerHTML += questionHtml;
+  });
 }
+
 
 function resetQuiz() {
   // Reset to setup screen
@@ -263,4 +421,7 @@ function resetQuiz() {
   currentQuestionIndex = 0
   userAnswers = []
   currentScore = 0
+  
+  // Reset background color
+  resetBackgroundColor();
 }
